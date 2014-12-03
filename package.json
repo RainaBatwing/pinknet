@@ -1,0 +1,33 @@
+{
+  "name": "pinknet",
+  "description": "Low Level P2P networking for building darknets",
+  "version": "0.0.1",
+  "keywords": [
+    "darknet",
+    "networking",
+    "private",
+    "social",
+    "mesh",
+    "net"
+  ],
+  "author": { "name": "Raina Batwing" },
+  "main": "pinknet.js",
+  "dependencies": {
+    "tweetnacl": ">=0.12.2",
+    "blake2s-js": "^1.0",
+    "msgpack5": "^1.3",
+    "bs58": "^2.0"
+  },
+  "devDependencies": {
+    "coffee-script": "~1.8",
+    "vows": "^0.8"
+  },
+  "scripts": {
+    "prepublish": "coffee -c ."
+  },
+  "homepage": "https://github.com/RainaBatwing/pinknet",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RainaBatwing/pinknet.git"
+  }
+}
