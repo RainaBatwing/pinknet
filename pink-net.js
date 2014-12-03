@@ -83,7 +83,7 @@
         compactAddress.writeUInt8(parseInt(digit), index);
       }
       compactAddress.writeUInt16BE(parseInt(this.port), 4);
-      datachunk = msgpack.encode([4, compactAddress, new Buffer(publicKey)]).slice(0);
+      datachunk = msgpack.encode([4, compactAddress, new Buffer(publicKey)]).slice();
       checksum = blakeDigest(datachunk, 1);
       bytes = Buffer.concat([new Buffer(checksum), datachunk]);
       return base58.encode(bytes);

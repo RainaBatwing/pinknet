@@ -13,13 +13,15 @@ blakeDigest = (data, args...)->
 # Pink Invite - a human friendly way to introduce two peers by having them share
 # something that looks like an invite code
 class PinkInvite
+  # accepts an object with address, port, and publicKey properties, or an
+  # encoded invite string
   constructor: (arg)->
     if typeof(arg) is 'string'
       @_parse arg
     else if typeof(arg) is 'object'
       this[key] = arg[key] for key in ['address', 'port', 'publicKey']
 
-
+  # internal - string invite parser
   _parse: (inviteCode)->
     inviteBytes = base58.decode(inviteCode)
     datachunk = inviteBytes.slice(1)
@@ -37,6 +39,7 @@ class PinkInvite
     @port = data[1].readUInt16BE(4)
     @publicKey = data[2]
 
+  # convert invite in to a compact encoded human friendly form
   toString:()->
     publicKey = @publicKey
     publicKey = base58.decode(publicKey) if typeof(publicKey) is 'string'
@@ -44,14 +47,12 @@ class PinkInvite
     for digit, index in @address.split('.')
       compactAddress.writeUInt8 parseInt(digit), index
     compactAddress.writeUInt16BE parseInt(@port), 4
-    datachunk = msgpack.encode([4, compactAddress, new Buffer(publicKey)]).slice(0)
+    datachunk = msgpack.encode([4, compactAddress, new Buffer(publicKey)]).slice()
     checksum = blakeDigest(datachunk, 1)
-    #console.log "checksum:", checksum[0].toString(16)
-    #console.log "datachunk:", datachunk
     bytes = Buffer.concat([new Buffer(checksum), datachunk])
-    #console.log "concat:", bytes
     base58.encode(bytes)
 
+  # debug version of invite
   inspect:()->
     "udp://#{base58.encode(@publicKey)}@#{@address}:#{@port}"
 
