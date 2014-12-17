@@ -6,15 +6,17 @@ base58 = require 'bs58'
 
 randomNetwork =->
   keypair = nacl.box.keyPair()
-  {
+  net =
     secretKey: new Buffer(keypair.secretKey)
     publicKey: new Buffer(keypair.publicKey)
-  }
+  net.address = "udp://#{base58.encode(net.publicKey.toJSON())}@4.3.2.1:5678/"
+  return net
+
 
 suite = vows.describe "Pink Network Library"
 mockNetwork1 = randomNetwork()
 mockNetwork2 = randomNetwork()
-mockAddress = "udp://1.2.3.4:5678"
+
 
 suite.addBatch
   "pink.Address without pubkey":
@@ -35,7 +37,9 @@ suite.addBatch
       assert.notEqual addr.publicKey, null
       assert.equal addr.publicKey.length, mockNetwork1.publicKey.length
       assert.equal JSON.stringify(addr.publicKey.toJSON()), JSON.stringify((new Buffer(mockNetwork1.publicKey)).toJSON())
-
+    "can encode buffer without a publicKey":(url)->
+      addr = pink.Address.parse(pink.Address.parse(url).toBuffer(includePublicKey: false))
+      assert.equal addr.publicKey, null
 
   # test invite code functionality
   "pink.Invite":
@@ -56,14 +60,14 @@ suite.addBatch
 
 
   # test pulse packet abstractions
-  # "pink.Pulse.encode()":
-  #   topic: pink.Pulse.encode(
-  #     network: mockNetwork1
-  #     recipient: mockNetwork2
-  #     meta: { ein: "data dog" }
-  #   )
-  #   "creates a buffer":(output)->
-  #     assert.isTrue Buffer.isBuffer(output)
+  "pink.Pulse.encode()":
+    topic: pink.Pulse.encode(
+      network: mockNetwork1
+      to: mockNetwork2.address
+      meta: { ein: "data dog" }
+    )
+    "creates a buffer":(output)->
+      assert.isTrue Buffer.isBuffer(output)
     # "pink.Pulse.decode()":
     #   topic:(buffer)-> pink.Pulse.decode(buffer, network: mockNetwork2)
     #   "returns an object":(output)->

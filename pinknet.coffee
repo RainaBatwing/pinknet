@@ -5,7 +5,6 @@ blake2s = require('blake2s-js')
 udp = require('dgram')
 util = require('util')
 url = require('url')
-crypto = require('crypto')
 
 # quick shortcut version of blake2s digest
 blakeDigest = (data, args...)->
@@ -74,11 +73,11 @@ class PinkAddress
       throw new Error("publicKey cannot be #{Object.prototype.toString.call(@publicKey)}") unless Buffer.isBuffer(@publicKey)
 
   # copy address
-  copy:({includePublicKey})->
-    new @constructor({@ip, @port, @publicKey})
+  copy:({includePublicKey} = {includePublicKey: true})->
+    new @constructor({@ip, @port, publicKey: includePublicKey})
 
   # convert to a compact msgpacked representation
-  toBuffer:()->
+  toBuffer:({includePublicKey} = {includePublicKey: true})->
     if @ip.indexOf(':') isnt -1
       type = 6
       compact_ip = []
@@ -95,7 +94,7 @@ class PinkAddress
       compact_ip = new Buffer(digits)
     data = [type, compact_ip, @port]
     throw new Error("publicKey must be a Buffer or null") unless @publicKey is null or Buffer.isBuffer(@publicKey)
-    data.push(@publicKey) if @publicKey
+    data.push(@publicKey) if @publicKey and includePublicKey
     msgpack.encode(data).slice()
 
   # URI form
@@ -131,89 +130,6 @@ PinkAddress.parse = (buffer)->
   new PinkAddress({ip, port, publicKey})
 
 
-# Pink Pulse packet interface
-# Constructor accepts
-# class PinkPulse
-#   constructor:({@source, @destination, @meta, @origin, noInit, packetNonce})->
-#     now = Date.now()
-#     @meta = {} unless typeof(meta) is 'object'
-#     @nonce = packetNonce || new Buffer(nacl.randomBytes(nacl.box.nonceLength))
-#     unless noInit
-#       @meta.ot = now
-#       @meta.id = new Buffer(nacl.randomBytes(PinkPulse.idLength))
-#     @isReply = @meta.origin != null
-#     if @isReply
-#       # roundtrip latency in milliseconds
-#       @latency = now - @meta.ot
-#       # time difference between local and remote peer
-#       @outgoingLatency = @meta.time - @meta.ot
-#       # try to very roughly guess time difference between local and remote peer
-#       # this would only work if latency was symetrical. it's not.
-#       # maybe useful to alert users if their clock seems extremely wrong
-#       @timeOffset = @outgoingLatency - (@latency / 2)
-#
-#   # generate buffer version ready for transmission
-#   toBuffer:(network)->
-#     return false unless @source and @destination
-#     return false if nacl.verify(asByteArray(network.publicKey), asByteArray(@destination))
-#     cipherMeta = asBuffer(nacl.box(
-#       asByteArray(msgpack.encode(@meta)),
-#       asByteArray(@nonce),
-#       asByteArray(network.secretKey),
-#       asByteArray(@destination)
-#     ))
-#     # originators public key is cloaked to make traffic more random-looking
-#     cloakedSource = PinkPulse.cloak(@source, @nonce, @destination)
-#     Buffer.concat([@nonce, cloakedSource, cipherMeta])
-#
-#   # generate a reply packet
-#   reply:(metaOverrides)->
-#     return false if @isReply # replying to a reply is not allowed
-#     replyMeta = {}
-#     replyMeta[key] = value for key, value of @meta
-#     replyMeta.origin = @origin.compact()
-#     replyMeta.time = Date.now()
-#     replyMeta[key] = value for key, value of metaOverrides
-#     new PinkPulse(
-#       source: @destination, destination: @source,
-#       meta: replyMeta, noInit: true)
-#
-#   # debug helper
-#   inspect:()->
-#     source = base58.encode(new Buffer(@source))[0...8]
-#     dest = base58.encode(new Buffer(@destination))[0...8]
-#     meta = util.inspect(@meta)
-#     "<Pulse #{source}... -> #{dest}... #{meta}>"
-# PinkPulse.idLength = 8
-# # apply cloak to some data up to 32 bytes
-# PinkPulse.cloak = (input, nonce, pubkey)->
-#   cloak = blakeDigest(Buffer.concat([nonce, pubkey]), input.length)
-#   # author pubkey needs to be uncloaked via xor
-#   output = new Buffer(input.length)
-#   # author obscured via xor using digest as an awful one time pad
-#   output[idx] = input[idx] ^ cloakByte for cloakByte, idx in cloak
-#   return output
-# # parse a received pulse
-# PinkPulse.parse = (data, network)->
-#   # fails if not long enough to plausably be a pulse
-#   return false if data.length < nacl.box.nonceLength + nacl.box.publicKeyLength + nacl.box.overheadLength + 1
-#   nonce = data.slice(0, nacl.box.nonceLength)
-#   authorCloakedKey = data.slice(nacl.box.nonceLength, nacl.box.publicKeyLength)
-#   metaCiphertext = data.slice(nacl.box.nonceLength + nacl.box.publicKeyLength)
-#   authorKey = PinkPulse.cloak(authorCloakedKey, nonce, network.publicKey)
-#
-#   # TODO: Cache shared key for these box operations
-#   meta = nacl.box.open(new Uint8Array(metaCiphertext), new Uint8Array(nonce), authorKey, network.secretKey)
-#   return false unless meta # if decrypt failed, give up - it's not for us or not a pulse
-#   try
-#     meta = msgpack.decode(meta)
-#   catch err
-#     return false # if msgpack fails it's corrupt
-#   return false unless typeof(meta) is 'object'
-#   return new PinkPulse(
-#     source: authorKey, destination: network.publicKey,
-#     noInit: true, meta: meta, packetNonce: nonce)
-
 # Parser, Generator, and other utilities for Pulse packets
 PinkPulseUtils =
   # apply cloak to some data up to 32 bytes
@@ -225,6 +141,23 @@ PinkPulseUtils =
     output[idx] = input[idx] ^ cloakByte for cloakByte, idx in cloak
     return output
 PinkPulse =
+  # encode a new pulse in to a packet to send over UDP directly
+  encode:({meta, network, to})->
+    ba = asByteArray; buff = asBuffer
+    to = PinkAddress.parse(to)
+    meta = {} if meta is null
+    throw new Error("cannot encode pulse to address with no publicKey") unless to.publicKey
+    throw new Error("meta must be an object") unless typeof(meta) is 'object'
+    nonce = buff nacl.randomBytes(nacl.box.nonceLength)
+    publicKey = buff network.publicKey
+    cloakedKey = PinkPulseUtils.cloak(publicKey, nonce, to.publicKey)
+    plaintext = msgpack.encode(meta)
+    ciphertext = buff nacl.box(
+      ba plaintext, nonce, ba to.publicKey, ba network.secretKey
+    )
+    Buffer.concat([buff(nonce), cloakedKey, ciphertext])
+
+  # decode a UDP packet pulse object, if it is a valid one, otherwise returns false
   decode:(buffer, {network, sender})->
     ba = asByteArray; buff = asBuffer
     # fail if not long enough to be plausable
@@ -245,24 +178,14 @@ PinkPulse =
       return { sender, meta }
     catch err
       return false
-  encode:({meta, network, destination})->
-    ba = asByteArray; buff = asBuffer
-    throw new Error("meta must be an object") unless typeof(meta) is 'object'
-    nonce = crypto.randomBytes(nacl.box.nonceLength)
-    publicKey = buff network.publicKey
-    cloakedKey = PinkPulseUtils.cloak(publicKey, nonce, destination.publicKey)
-    plaintext = msgpack.encode(meta)
-    ciphertext = buff nacl.box(
-      ba plaintext, ba nonce, ba destination.publicKey, ba network.secretKey
-    )
-    Buffer.concat([nonce, cloakedKey, ciphertext])
 
+  # generate an encoded reply to a decoded pulse
   reply:(originalPulse, constructorOptions)->
     newMeta = {}
     newMeta[key] = value for key, value of originalPulse.meta
-    newMeta.origin = originalPulse.sender.copy(includePublicKey: no).toBuffer()
+    newMeta.origin = originalPulse.sender.toBuffer(includePublicKey: no)
     newMeta.time = Date.now() # local epoch time in milliseconds
-    constructorOptions.to = originalPulse.from
+    constructorOptions.to = originalPulse.sender
     PinkPulse.encode(newMeta, constructorOptions)
 
 
