@@ -123,21 +123,24 @@ notification 'rpc.req', [method_name, nonce, named_args_object], (err)->
 Reply:
 
 ```coffeescript
-pink.on 'rpc.req', (method_name, nonce, args_object)->
+pink.on 'rpc.req', ([method_name, nonce, args_object])->
   error = null
   try
     reply = rpc_methods[method_name](args_object)
   catch err
     error = err.toString()
     reply = null
-  notification 'rpc.res', [nonce, error, reply], (err)->
+  reply_object = [error, reply]
+  notification 'rpc.res', [nonce, reply_object], (err)->
     # timeout or something like that if err isn't null
 ```
 
-RPC requests and responses can include Readable, Writable, and Duplex streams. These are encoded with msgpack extension's 0x50, 0x51, and 0x52 respectively, and hold as data a 16-bit number. Any number is valid so long as it isn't already in use
 
-TBA: spec out streams as arguments and return values in RPC, so node apps can
-pass around Readable, Writable, and Duplex streams easily.
+### Long form RPC
+
+When RPC requests or responses are too large to fit in a UDP4 packet we transport the the args_object, reply, or both using Streams. When request arguments are too long, the request args_object is msgpacked and written to a Stream, and that stream is passed as the args_object. Responder similarly replies using a stream containing a msgpack of reply_object when it would otherwise be too long.
+
+Users should try not to use RPC to deliver large pieces of data like this, because the request and response is buffered entirely in to memory during transmission. Implementations may impose a limit on size, with a suggested limit of 64kb. Library users should instead pass streams directly as arguments and responses in their application logic.
 
 
 ### Invite Codes
@@ -155,11 +158,9 @@ Streams transmit in a single direction and are used to reliably transmit long pi
 
 #### Stream Setup
 
-Streams must be fully setup before any chunks can be transmitted. This is done via RPC using a msgpack extension. Extension code is 0x1 and data is a uint8, uint16be, or uint32be integer containing a unique `stream_id` number. `stream_id` can be transmitted again to reference the same stream, and can be reused for a new stream once a `stream.close` notification has been sent and acked by either peer.
+Streams must be fully setup before any chunks can be transmitted. This is done via RPC using a msgpack extension. Extension code is 0x1 and data is a uint8, uint16be, or uint32be integer containing a unique `stream_id` number. `stream_id` can be transmitted again to reference the same stream, and can be reused for a new stream once a `stream.close` or `stream.end` notification has been sent and acked as described in **Stream Closing**. `stream_id` numbers must be unique in only one direction.
 
-Peers opening a new stream may pick stream_ids with any scheme, randomly or sequentially, as a number whose least significant bit is equal to 'order'. New streams may reuse previous stream_ids once they are confirmed to be fully closed: when `stream.close` has been acked successfully. stream_id numbers must be unique in only one direction.
-
-Streams can be included in RPC requests and responses, but shouldn't be used in notifications or pulses.
+Streams can be included in RPC requests and responses, but  be used in notifications or pulses.
 
 #### Stream Closing
 
