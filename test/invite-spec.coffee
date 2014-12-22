@@ -33,4 +33,4 @@ suite.addBatch
     "prepend": -> assert.isFalse invite.verify("5#{new invite(address)}")
 
 
-suite.run() # Run tests
+suite.run()
