@@ -1,7 +1,7 @@
 blake2s = require 'blake2s-js'
 crypto = require 'crypto'
 base58 = require 'bs58'
-msgpack = require 'msgpack5'
+msgpack = require('msgpack5')()
 nacl   = require 'tweetnacl/nacl-fast'
 
 # helpers module
