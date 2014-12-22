@@ -6,10 +6,9 @@ help = require '../lib/helpers'
 suite = vows.describe "Pink Helpers Library"
 suite.addBatch
   "blake":
-    topic: help.blake('abc', 2)
+    topic: help.blake(new Buffer('e85c06a80a62d65e', 'hex'), 3)
     "correct output":(output)->
-      assert.equal output[0], 0xD8
-      assert.equal output[1], 0xCE
+      assert.equal output.toString('hex').toLowerCase(), 'badca7'
 
   "asByteArray with Buffer input":
     topic: help.asByteArray(new Buffer([1,2]))

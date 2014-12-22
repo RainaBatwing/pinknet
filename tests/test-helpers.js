@@ -12,10 +12,9 @@
 
   suite.addBatch({
     "blake": {
-      topic: help.blake('abc', 2),
+      topic: help.blake(new Buffer('e85c06a80a62d65e', 'hex'), 3),
       "correct output": function(output) {
-        assert.equal(output[0], 0xD8);
-        return assert.equal(output[1], 0xCE);
+        return assert.equal(output.toString('hex').toLowerCase(), 'badca7');
       }
     },
     "asByteArray with Buffer input": {
