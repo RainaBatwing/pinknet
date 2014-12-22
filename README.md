@@ -85,22 +85,22 @@ Raw messages are used for all other types of communication and take this form:
 [24 byte nonce] [nacl.box of packet body using specified nonce]
 ```
 
-Packet Body plaintext is a MsgPack array with two elements. First element is a string message type, like "appname.poke". Second element is any MsgPack item. The second element maybe null.
+Packet Body plaintext is a MsgPack array with two elements. First element is a numeric message type, like 11. Second element is any MsgPack item. The second element maybe null. Applications are generally discouraged from using raw messages. Unreliable notifications are a better option.
 
 
 ### Reliable Notification
 
-Notifications are messages with a type, and a JSON attachment. They receive an acknowledgement in reply. They are implemented on top of unreliable raw messages. Raw message type is "N" and message body is an object:
+Notifications are messages with a type, and a JSON attachment. They receive an acknowledgement in reply. They are implemented on top of unreliable raw messages. Raw message type is 10 and message body is an array:
 
 ```json
-{
-  "i":msgpack compatible value - a unique nonce for this notification,
-  "t":"notification type name",
-  "a":attachment value
-}
+[
+  (anything) ID, // nonce to identify this unique notification
+  (string) type, // name of notification
+  (anything) body, // any msgpackable data
+]
 ```
 
-Acknowledgments are message type "NAck". Message body is the value of "i" packed with MsgPack. Notifications maybe redelivered if a NAck is not received promptly. PinkNet implementations should keep track of recent id nonce strings to avoid repeating notifications to higher levels.
+Acks are message type 11. Message body is the value of ID. Notifications maybe redelivered if an Ack is not received promptly.
 
 ### Unreliable Notification
 
@@ -178,7 +178,7 @@ notification "stream.close", {id: stream_id}
 #### Stream Chunk
 
 Chunks of up to around 450* bytes are sent as a raw message of type
-'stream.chk' with a msgpacked array message:
+20 with a msgpacked array message:
 
 ```json
 [
