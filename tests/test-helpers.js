@@ -107,6 +107,12 @@
         return assert.equal(ret.toString(), "かわいい");
       }
     },
+    "nacl.box.keyPair": {
+      topic: help.nacl(help.nacl.box.keyPair),
+      "returns buffers inside object": function(ret) {
+        return assert.isTrue(Buffer.isBuffer(ret.publicKey));
+      }
+    },
     "nacl.secretbox.open": {
       topic: function() {
         var box, key, nonce;

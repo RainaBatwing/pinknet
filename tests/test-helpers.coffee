@@ -63,6 +63,10 @@ suite.addBatch
     "returns buffer":(ret)-> assert.isTrue Buffer.isBuffer(ret)
     "is correct":(ret)-> assert.equal ret.toString(), "かわいい"
 
+  "nacl.box.keyPair":
+    topic: help.nacl(help.nacl.box.keyPair)
+    "returns buffers inside object":(ret)-> assert.isTrue Buffer.isBuffer(ret.publicKey)
+
   "nacl.secretbox.open":
     topic:->
       key = new Buffer('Bkiuwce/zjTus6IBqb5z5ZaiTbnHNLqZgvoCy8sInhA=', 'base64')

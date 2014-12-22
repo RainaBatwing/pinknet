@@ -96,6 +96,15 @@ helpers =
     if ret.BYTES_PER_ELEMENT
       eraseList.push ret # schedule it for secure erasure
       ret = new Buffer(ret)
+    else if typeof(ret) is 'object'
+      newObj = {}
+      for key, value of ret
+        if value.BYTES_PER_ELEMENT
+          eraseList.push value
+          newObj[key] = new Buffer(value)
+        else
+          newObj[key] = value
+      ret = newObj
 
     helpers.erase(eraseList...)
 
