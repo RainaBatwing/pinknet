@@ -26,5 +26,20 @@ suite.addBatch
     "can encode buffer without a publicKey":(url)->
       addr = address.parse(address.parse(url).toBuffer(includePublicKey: false))
       assert.equal addr.publicKey, null
-
+    "copy works":(url)->
+      assert.equal address.parse(url).copy(includePublicKey: yes).toString(), url
+      assert.equal address.parse(url).copy(includePublicKey: no).toString(), "udp://4.3.2.1:5678"
+    "equals()":(url)->
+      a1 = address.parse(url)
+      assert.isTrue a1.equals url
+      assert.isTrue a1.equals "udp://4.3.2.1:5678"
+      assert.isTrue a1.equals a1.copy(includePublicKey: yes)
+      assert.isTrue a1.equals a1.copy(includePublicKey: no)
+      assert.isTrue a1.equals a1.copy(includePublicKey: yes).toBuffer()
+      assert.isTrue a1.equals a1.copy(includePublicKey: no).toBuffer()
+      assert.isFalse a1.equals ''
+      assert.isFalse a1.equals {}
+      assert.isFalse a1.equals false
+      assert.isFalse a1.equals "udp://"
+      assert.isFalse a1.equals new Buffer([])
 suite.run() # Run tests

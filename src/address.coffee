@@ -27,7 +27,7 @@ class PinkAddress
 
   # copy address
   copy:({includePublicKey} = {includePublicKey: true})->
-    new @constructor({@ip, @port, publicKey: includePublicKey})
+    new @constructor({@ip, @port, publicKey: if includePublicKey then @publicKey else null})
 
   # convert to a compact msgpacked representation
   toBuffer:({includePublicKey} = {includePublicKey: true})->
@@ -58,14 +58,25 @@ class PinkAddress
   # test equality
   equals:(other)->
     other = PinkAddress.parse(other) unless other.constructor is @constructor
-    return false if @publicKey and other.publicKey and @publicKey.toJSON().toString() != other.publicKey.toJSON().toString()
+    return false if other == false
+    return false if @publicKey and other.publicKey and @publicKey.toString('hex') != other.publicKey.toString('hex')
     return @ip == other.ip and @port == other.port and @protocol == other.protocol
 
 # parse compact binary representation
 PinkAddress.parse = (input)->
+  #return false if input is null or input is false or input is ''
   return input if input.constructor is PinkAddress
-  return new PinkAddress(input) unless Buffer.isBuffer(input)
-  [type, ip_data, port, publicKey] = msgpack.decode(input)
+  unless Buffer.isBuffer(input)
+    try
+      return new PinkAddress(input)
+    catch err
+      return false
+  try
+    arr = msgpack.decode(input)
+    return false if arr.length < 3
+    [type, ip_data, port, publicKey] = arr
+  catch err
+    return false
   # reconsititute IP string
   seperator = {4: '.', 6: ':'}[type]
   base = {4: 10, 6: 16}[type]
