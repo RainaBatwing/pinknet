@@ -1,7 +1,11 @@
 # test everything
-coffee test/helpers-spec.coffee
+coffee -c test/*-spec.coffee
+node test/helpers-spec
 echo
-coffee test/address-spec.coffee
+node test/address-spec
 echo
-coffee test/invite-spec.coffee
+node test/invite-spec
 echo
+node test/codecs-spec
+echo
+rm test/*-spec.js

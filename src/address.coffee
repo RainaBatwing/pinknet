@@ -57,8 +57,8 @@ class PinkAddress
 
   # test equality
   equals:(other)->
+    return false unless other
     other = PinkAddress.parse(other) unless other.constructor is @constructor
-    return false if other == false
     return false if @publicKey and other.publicKey and @publicKey.toString('hex') != other.publicKey.toString('hex')
     return @ip == other.ip and @port == other.port and @protocol == other.protocol
 
