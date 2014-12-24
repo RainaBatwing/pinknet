@@ -54,16 +54,24 @@ helpers =
   randomBytes: crypto.randomBytes
 
   # generate a random ID string with a number of octets worth of randomness
-  randomID: (octets)-> base58.encode(crypto.randomBytes(octets))
+  # result is case insensitive base36 with hyphens
+  randomID: (octets)->
+    buff = new Buffer(Math.ceil(octets / 4) * 4)
+    buff.fill(0)
+    crypto.randomBytes(octets).copy(buff)
+    out = for group in [0...buff.length] by 4
+      buff.readUInt32LE(group).toString(36)
+    return out.join('-')
+
 
   # generate an unique random index id for an object
   # attempts short indexes, getting progressively longer
   uniqueIndex: (hashmap, maxlength = 8)->
     length = 1
     loop
-      id = helpers.randomID(length)
+      id = helpers.randomID(Math.floor(length))
       return id if hashmap[id] is undefined
-      length += 1 if length < maxlength
+      length += 0.25 if length < maxlength
 
   # fill typed arrays and buffers with zeros to attempt to securely erase crypto secrets from memory
   erase: (arrays...)->
