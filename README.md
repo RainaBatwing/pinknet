@@ -158,21 +158,16 @@ Streams transmit in a single direction and are used to reliably transmit long pi
 
 #### Stream Setup
 
-Streams must be fully setup before any chunks can be transmitted. This is done via RPC using a msgpack extension. Extension code is 0x1 and data is a uint8, uint16be, or uint32be integer containing a unique `stream_id` number. `stream_id` can be transmitted again to reference the same stream, and can be reused for a new stream once a `stream.close` or `stream.end` notification has been sent and acked as described in **Stream Closing**. `stream_id` numbers must be unique in only one direction.
+Streams must be fully setup before any chunks can be transmitted. This is done via RPC using a msgpack extension. Extension code is 0x1 and data is a uint8, uint16be, or uint32be integer containing a unique `stream_id` number. `stream_id` can be transmitted again to reference the same stream. Stream ID's must not be reused until the recipient has acked every chunk.
 
 Streams can be included in RPC requests and responses, but  be used in notifications or pulses.
 
 #### Stream Closing
 
-When a sender is finished writing to a stream, stream is closed with:
+Receiver peer may request a stream be ended early by notifying sender, which requests all chunks not yet transmitted be cleared and the next chunk be made the final false chunk. Receiver peer must still ack all chunks received after sending this request, even if it doesn't do anything with them.
 
 ```coffeescript
-# sender notifying reader recipient stream has ended
-# must not be sent until all chunks are acked
-notification "stream.end", {id: stream_id}
-
-# if reader recipient wants to abort at any time it can send to stream sender
-notification "stream.close", {id: stream_id}
+notify sender, "stream.end", {id: stream_id}
 ```
 
 #### Stream Chunk
@@ -200,6 +195,8 @@ which are acknowledged by a raw message type 'stream.ack'
 ```
 
 Recipient can transmit a `read_length < 1` to tell sender to pause transmission. Recipient may then transmit another ack with no sequence_ids to update read_length with a positive integer to restart transmission. See section Stream Delivery Rules. `read_length` informs sender how many free bytes are in recipient's buffer, for simple flow control. Each ack includes a timediff value which is Local Time - Chunk `time` in milliseconds. This value maybe negative due to peer computers having different inaccurate time. Timediff is used for delay-based congestion control.
+
+When the stream is complete, the sender finally sends a packet where chunk_data is `false`.
 
 #### Stream Delivery Rules
 
