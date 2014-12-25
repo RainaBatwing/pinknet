@@ -1,5 +1,7 @@
 ## Pink Network (draft)
 
+WARNING: This document is a crazy stream of consciousness. As pink gets implemented it is changing to track the discoveries and changes made through implementation. The only aspect unlikely to change is the raw message encoding and pulse encoding - e.g. the ciphertext stuff - which I think is a pretty cool mechanism.
+
 Pink is a low level protocol and library for building toy p2p networks. Project aims:
 
  1. Provide a simple interface which beginner coders can use to create social apps safely and securely
@@ -17,36 +19,29 @@ Pink encodes packets as compact binary blobs, and uses MessagePack where possibl
 
 ### Pulse Request
 
-Peers send each other pulse packets to keep NAT holes open, and keep each other updated on their current IP address and port. Pulses also measure latency and compare local clocks, allowing consensus-based shared timekeeping. A successful pulse must occur before peers communicate using any other packet type, ensuring both peers know each other's publicKey. Peers should pulse any others they intend to communicate with at least once per minute. Peers should also pulse each other if their packets aren't being acked promptly, to recover from IP changes when shifting between different networks.
+Peers use pulses to discover their public IP address to that peer, and as a keep-alive to keep NAT port mappings open. Peers should pulse each other at a rate of about *once per 30 seconds* generally. Pulses can measure latency and compare local clocks via the "respond" mechanism, allowing consensus-based shared timekeeping.
+
+If a peer is unresponsive to other types of requests, the requesting peer should send the destination peer a Request Pulse. This helps recover from situations where the sending peer has changed to a different network or otherwise switched to a different network address, and the recipient has no idea who they are and cannot decrypt their packets.
 
 ```
 [24 byte nonce] [32 byte cloaked public key]
 [MsgPack bytes encrypted with nacl.box with specified nonce]
 ```
 
-MsgPack bytes must encode an object. This object can be empty, but a reasonable implementation might include packet creation time for latency measurement, and a unique identifier to track the pulse response to a specific pulse request.
-
-
-### Pulse Response
-
-Pulse response includes a new random 24 byte nonce, and the responder's
-curve25519 public key.
-
-```
-[24 byte nonce] [32 byte cloaked public key]
-[MsgPack bytes encrypted with nacl.box with specified nonce]
-```
-
-Pulse response contains the same object sent in the request, merged with:
+MsgPack bytes must encode an object. This object must contain a superset of:
 
 ```json
 {
-  "time": (integer) time in milliseconds since unix epoch
-  "origin": (compact ip buffer) internet address of original pulse, in compact ip format
+  "time": local time in milliseconds
+  "you": CompactAddress of intended recipient, without publicKey included
+  // optionally:
+  "respond": non-null value
+  // or:
+  "response": value from "respond" in request pulse
 }
 ```
 
-Peers must not reply again to pulses which contain an `origin` property or which don't include an object.
+If a pulse contains a `"respond"` key and it's value is not null, the receiver should immediately send a pulse back containing the same object `"respond"` contained. Implementations can use that value to transmit anything, like an object, or a numeric request id.
 
 
 ### Public Key Cloaking
@@ -184,7 +179,7 @@ Chunks of up to around 450* bytes are sent as a raw message of type
 ]
 ```
 
-which are acknowledged by a raw message type 'stream.ack'
+which are acknowledged by a raw message type 21
 
 ```json
 [
