@@ -5,6 +5,18 @@ help = require '../lib/helpers'
 
 suite = vows.describe "Pink Helpers Library"
 suite.addBatch
+  "millis":
+    topic:->
+      a = help.millis()
+      setTimeout((=>
+        b = help.millis()
+        @callback(null, b - a)
+        ), 50)
+      return
+    "seems okay":(result)->
+      assert.isTrue result > 40
+      assert.isTrue result < 100
+  
   "blake":
     topic: help.blake(new Buffer('e85c06a80a62d65e', 'hex'), 3)
     "correct output":(output)->

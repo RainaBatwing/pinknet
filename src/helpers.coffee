@@ -4,12 +4,19 @@ base58 = require 'bs58'
 msgpack = require('msgpack5')()
 nacl   = require 'tweetnacl/nacl-fast'
 
+global._pink_helpers_startup_time ||= process.hrtime()
+
 # helpers module
 # collection of useful functions
 helpers =
   # expose some generally useful things
   base58: base58
   msgpack: msgpack
+
+  # get relative time in milliseconds
+  millis: ->
+    diff = process.hrtime(global._pink_helpers_startup_time)
+    (diff[0] * 1000) + (diff[1] / 1000000)
 
   # quick shortcut to make a blake2s digest from whatever
   # to have a specific digest length: help.blake(string/buffer, 16) for 16 bytes
