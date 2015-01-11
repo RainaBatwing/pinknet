@@ -2,16 +2,12 @@
 help = require './helpers'
 address = require './address'
 nacl = help.nacl
-msgpack = help.msgpack
-
-# install msgpack extensions
-address.extendMsgpack(msgpack)
 
 codecs = {}
 
-# apply cloak to some data up to 32 bytes
-pulseCloak = (input, nonce, destinationPublicKey)->
-  cloak = help.blake(Buffer.concat([nonce, destinationPublicKey]), input.length)
+# apply cloak to input using nonce and key to generate cloak
+applyCloak = (input, nonce, key)->
+  cloak = help.blake(Buffer.concat([nonce, key], nonce.length + key.length), input.length)
   # author pubkey needs to be uncloaked via xor
   output = new Buffer(input.length)
   # author obscured via xor using digest as an awful one time pad
@@ -19,19 +15,16 @@ pulseCloak = (input, nonce, destinationPublicKey)->
   return output
 
 # codec to encode and decode pulse packets
-codecs.pulse =
+codecs.id =
   # encode a new pulse in to a packet to send over UDP directly
-  encode:({meta, network, to})->
+  encode:({data, network, to})->
     to = address.parse(to)
-    meta = {} if meta is null
-    throw new Error("cannot encode pulse to address with no publicKey") unless to.publicKey
-    throw new Error("meta must be an object") unless typeof(meta) is 'object'
+    throw new Error("cannot encode id packet without to.publicKey") unless to.publicKey
+    throw new Error("data must be a buffer") unless Buffer.isBuffer(data)
     nonce = help.randomBytes(nacl.box.nonceLength)
-    cloakedKey = pulseCloak(network.publicKey, nonce, to.publicKey)
-    plaintext = msgpack.encode(meta).slice(0)
-    ciphertext = nacl(nacl.box, plaintext, nonce, to.publicKey, network.secretKey)
-    packet = Buffer.concat([nonce, cloakedKey, ciphertext])
-    return packet
+    cloakedKey = applyCloak(network.publicKey, nonce, to.publicKey)
+    ciphertext = nacl(nacl.box, data.slice(0), nonce, to.publicKey, network.secretKey)
+    Buffer.concat([nonce, cloakedKey, ciphertext])
 
   # decode a UDP packet pulse object, if it is a valid one, otherwise returns false
   decode:(buffer, {network, sender})->
@@ -42,27 +35,28 @@ codecs.pulse =
     cloakedKey = buffer[nacl.box.nonceLength... nacl.box.nonceLength + nacl.box.publicKeyLength]
     ciphertext = buffer[nacl.box.nonceLength + nacl.box.publicKeyLength...]
     # uncloak sender's publicKey
-    senderPublicKey = pulseCloak(cloakedKey, nonce, network.publicKey)
+    senderPublicKey = applyCloak(cloakedKey, nonce, network.publicKey)
     # use their specified publicKey to try and decode message
-    plaintext = nacl(nacl.box.open, ciphertext, nonce, sender.publicKey, network.secretKey)
+    plaintext = nacl(nacl.box.open, ciphertext, nonce, senderPublicKey, network.secretKey)
     return false if plaintext is false
     try
-      meta = msgpack.decode(plaintext)
       if sender.publicKey.toString('hex') isnt senderPublicKey.toString('hex')
         sender = sender.copy()
         sender.publicKey = senderPublicKey
-      return { meta, sender }
+      return { data: plaintext, sender }
     catch err
       return false
 
 # raw message packet format
-codecs.message =
+codecs.compact =
   # encode a raw message
   encode:({to, type, data, network})->
     to = address.parse(to)
     nonce = help.randomBytes(nacl.box.nonceLength)
-    plaintext = msgpack.encode([type, data]).slice(0)
-    ciphertext = nacl(nacl.box, plaintext, nonce, to.publicKey, network.secretKey)
+    throw new Error("data must be a buffer") unless Buffer.isBuffer(data)
+    throw new Error("to publicKey incorrect length") unless to.publicKey.length is nacl.box.publicKeyLength
+    throw new Error("network secretKey incorrect length") unless network.secretKey.length is nacl.box.secretKeyLength
+    ciphertext = nacl(nacl.box, data.slice(0), nonce, to.publicKey, network.secretKey)
     Buffer.concat([nonce, ciphertext])
 
   # decode a raw message
@@ -72,12 +66,6 @@ codecs.message =
     ciphertext = buffer.slice(nacl.box.nonceLength)
     plaintext = nacl(nacl.box.open, ciphertext, nonce, sender.publicKey, network.secretKey)
     return false unless plaintext
-    obj = msgpack.decode(plaintext)
-    return false unless obj.length >= 2
-    return {
-      type: obj[0]
-      data: obj[1]
-      sender: sender
-    }
+    return { data: plaintext, sender }
 
 module.exports = codecs

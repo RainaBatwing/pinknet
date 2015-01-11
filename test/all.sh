@@ -6,6 +6,6 @@ node test/address-spec
 echo
 node test/invite-spec
 echo
-node test/codecs-spec
+node test/link-codecs-spec
 echo
 rm test/*-spec.js
