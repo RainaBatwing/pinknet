@@ -35,21 +35,22 @@ A packet should be encoded as an ID packet whenever:
 
 The encrypted content is an array encoded with MessagePack, with this form:
 
-```JSON
-[ack_id, sender_time, data]
+```json
+[message_id, sender_time, data]
 ```
 
 sender_time is the number of milliseconds since unix epoch or some other arbitrary point. sender_time is a double precision floating point number. ack_id is an integer, and data is whatever the application chooses.
 
 acks take this form:
 
-```JSON
-[ack_id, delta_time]
+```json
+[message_id, delta_time]
 ```
 
 delta_time is the recipient's time in milliseconds minus the sender_time from the original packet. When packets are retransmitted, the sender_time should be updated. delta_time is used for LEDBAT congestion control.
 
 Request packets may set their data field to null to send a keep alive. Applications shouldn't be notified about keep alive messages. Peers should send a keep alive more frequently than once every 60 seconds, to maintain mapping in NAT devices. Keep Alive messages follow the one ID packet every second rule and are very short, ensuring at least one ID packet is transmitted every 60 seconds.
+
 
 ### Public Key cloaking in ID packets ###
 
@@ -79,5 +80,13 @@ Pink Link does not identify what type of packet it is sending, so a receiver mus
  * Next, attempt to decrypt it as an ID Packet
 
 Whenever the sender decrypts an ID Packet, it should update that sender's network address record, and send all future packets to that network address. Applications should address peers by their public key.
+
+### Extra Considerations ###
+
+This document doesn't specify any mechanism to hide the length of packets. If this is important, you can pad the encrypted section with random bytes at the end. MessagePack seems to ignore extra data.
+
+Peers routinely share their clock with high precision, and could be a way to fingerprint peers who are trying to stay anonymous. Implementations may choose a random epoch for each connection to avoid this. A better epoch maybe the time when the first packet was sent to or received from that peer, keeping numbers lower and preserving sub-millisecond precision.
+
+Implementations should try to keep their API simple and choose sensible defaults. Pink aims to be friendly to beginner coders, like kids who want to add a multiplayer aspect to a game they made, to take away the incentive to learn complicated centralised solutions and perpetuate the status quo in future generations. P2P networking can potentially be much easier and cheaper, and for kids it is especially worthwhile because kids often have no access to servers, or only dodgy shell accounts gifted by strangers.
 
   -- <3 Raina
