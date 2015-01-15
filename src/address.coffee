@@ -6,17 +6,16 @@ base58 = help.base58
 # address represents an IP, Port, and optionally publicKey of a remote peer.
 
 # address provides two encodings. A string form, and a buffer format. String is
-# a valid URL in the format udp://pubkey@ip:port, and a buffer format encodes
+# a valid URL in the format udp4://pubkey@ip:port, and a buffer format encodes
 # ipv4, ipv6, and public keys very compactly for network transmission
 class PinkAddress
   constructor:(opts)->
-    #console.log "construct:", opts
     if typeof(opts) is 'string'
       {hostname: @ip, port: @port, protocol: @protocol, auth: @publicKey} = url.parse(opts)
-      throw new Error("unsupported protocol #{@protocol} in #{opts}") unless @protocol is 'udp:'
-    else if opts.ip and opts.port
+      throw new Error("unsupported protocol #{@protocol} in #{opts}") unless @protocol is 'udp4:'
+    else if opts.ip != undefined
       {@ip, @port, @publicKey} = opts
-      @protocol = 'udp:'
+      @protocol = 'udp4:'
     else
       throw new Error("Cannot parse #{Object.prototype.toString.call(opts)}")
     # convert types where needed
@@ -51,8 +50,8 @@ class PinkAddress
     msgpack.encode(data).slice()
 
   # URI form
-  toString:()->
-    auth = base58.encode(@publicKey) if @publicKey
+  toString:({includePublicKey} = {includePublicKey: true})->
+    auth = base58.encode(@publicKey) if @publicKey and includePublicKey
     url.format(slashes:true, protocol: @protocol, hostname: @ip, port: @port, auth: auth)
 
   # test equality

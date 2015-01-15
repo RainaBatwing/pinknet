@@ -6,7 +6,7 @@ address = require '../lib/address'
 suite = vows.describe "Pink Address"
 suite.addBatch
   "address without pubkey":
-    topic: "udp://123.134.221.4:17892"
+    topic: "udp4://123.134.221.4:17892"
     "parses url":(url)->
       assert.notEqual address.parse(url), false
     "encodes a buffer":(url)->
@@ -15,7 +15,7 @@ suite.addBatch
       assert.equal address.parse(address.parse(url).toBuffer()).toString(), url
 
   "address with public key":
-    topic: "udp://Dp1iRcubw2bcvSBhrff9EtRXYDXnHQBqcL2wEM5ViSek@4.3.2.1:5678"
+    topic: "udp4://Dp1iRcubw2bcvSBhrff9EtRXYDXnHQBqcL2wEM5ViSek@4.3.2.1:5678"
     "buffer and string encoding is lossless":(url)->
       assert.equal address.parse(address.parse(url).toBuffer()).toString(), url
     "publicKey is a buffer":(url)->
@@ -28,11 +28,11 @@ suite.addBatch
       assert.equal addr.publicKey, null
     "copy works":(url)->
       assert.equal address.parse(url).copy(includePublicKey: yes).toString(), url
-      assert.equal address.parse(url).copy(includePublicKey: no).toString(), "udp://4.3.2.1:5678"
+      assert.equal address.parse(url).copy(includePublicKey: no).toString(), "udp4://4.3.2.1:5678"
     "equals()":(url)->
       a1 = address.parse(url)
       assert.isTrue a1.equals url
-      assert.isTrue a1.equals "udp://4.3.2.1:5678"
+      assert.isTrue a1.equals "udp4://4.3.2.1:5678"
       assert.isTrue a1.equals a1.copy(includePublicKey: yes)
       assert.isTrue a1.equals a1.copy(includePublicKey: no)
       assert.isTrue a1.equals a1.copy(includePublicKey: yes).toBuffer()
@@ -40,6 +40,6 @@ suite.addBatch
       assert.isFalse a1.equals ''
       assert.isFalse a1.equals {}
       assert.isFalse a1.equals false
-      assert.isFalse a1.equals "udp://"
+      assert.isFalse a1.equals "udp4://"
       assert.isFalse a1.equals new Buffer([])
 suite.run() # Run tests
