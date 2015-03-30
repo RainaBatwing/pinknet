@@ -3,9 +3,8 @@ Pink Link is an encryption layer for UDP messaging between peers. It provides:
  * Message payload protected by Curve25519-XSalsa20-Poly1305 from NaCL library
  * Packet over network resembles random data, frustrating DPI
  * Tracks remote peer IP changes as peers move to different networks
- *
 
-Pink Link transmits all data through "ID Packets", named for the identifying public key included
+Pink Link transmits all data through "ID Packets", named for the identifying public key included. Together all these features add 72 bytes overhead to packets. New modes maybe introduced in the future which reduce this overhead
 
 ID packets take the following form:
 
