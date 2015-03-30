@@ -1,4 +1,4 @@
-blake2s = require 'blake2s-js'
+blake2s = require 'blake2s'
 crypto = require 'crypto'
 base58 = require 'bs58'
 msgpack = require('msgpack5')()

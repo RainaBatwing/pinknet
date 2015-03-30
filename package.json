@@ -13,10 +13,11 @@
   "author": { "name": "Raina Batwing" },
   "main": "lib/pink.js",
   "dependencies": {
-    "tweetnacl": ">=0.12.2",
-    "blake2s-js": "^1.0",
-    "msgpack5": "^1.3",
-    "bs58": "^2.0"
+    "tweetnacl": ">=0.13.0",
+    "blake2s": "^1.1",
+    "msgpack5": "^2.0",
+    "bs58": "^2.0",
+    "utp": ">=0.0.8"
   },
   "devDependencies": {
     "coffee-script": "~1.8",
