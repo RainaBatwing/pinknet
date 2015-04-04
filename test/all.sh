@@ -8,4 +8,6 @@ node test/invite-spec
 echo
 node test/link-codecs-spec
 echo
+node test/link-spec
+echo
 rm test/*-spec.js
