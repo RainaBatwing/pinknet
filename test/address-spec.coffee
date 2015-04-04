@@ -15,7 +15,7 @@ suite.addBatch
       assert.equal address.parse(address.parse(url).toBuffer()).toString(), url
 
   "address with public key":
-    topic: "udp4://Dp1iRcubw2bcvSBhrff9EtRXYDXnHQBqcL2wEM5ViSek@4.3.2.1:5678"
+    topic: "udp4://eadaa66a1e9100ca2fbf350430d667872e855aafe4f84506ae314cb806613354@4.3.2.1:5678"
     "buffer and string encoding is lossless":(url)->
       assert.equal address.parse(address.parse(url).toBuffer()).toString(), url
     "publicKey is a buffer":(url)->

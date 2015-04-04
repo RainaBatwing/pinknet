@@ -21,8 +21,8 @@ class PinkAddress
     # convert types where needed
     @port = parseInt(@port) if typeof(@port) isnt 'number'
     if @publicKey
-      @publicKey = help.asBuffer(base58.decode(@publicKey)) if typeof(@publicKey) is 'string'
-      throw new Error("publicKey cannot be #{Object.prototype.toString.call(@publicKey)}") unless Buffer.isBuffer(@publicKey)
+      @publicKey = new Buffer(@publicKey, 'hex') if typeof(@publicKey) is 'string'
+      throw new Error("publicKey must be hex string or buffer") unless Buffer.isBuffer(@publicKey)
 
   # copy address
   copy:({includePublicKey} = {includePublicKey: true})->
@@ -51,7 +51,7 @@ class PinkAddress
 
   # URI form
   toString:({includePublicKey} = {includePublicKey: true})->
-    auth = base58.encode(@publicKey) if @publicKey and includePublicKey
+    auth = @publicKey.toString('hex') if @publicKey and includePublicKey
     url.format(slashes:true, protocol: @protocol, hostname: @ip, port: @port, auth: auth)
 
   # test equality

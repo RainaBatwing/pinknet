@@ -9,7 +9,7 @@ udp4://publickey@ip:port/
 udp6://publickey@ip:port/
 ```
 
-`publickey` is base58 encoded. The public key is essential to the operation of Pink Link and should not be omitted.
+`publickey` is hex encoded. The public key is essential to the operation of Pink Link and should not be omitted.
 
 ### Invite Code ###
 
